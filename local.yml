@@ -1,0 +1,67 @@
+- hosts: localhost
+  pre_tasks:
+          - name: Update APT
+            become: true
+            apt:
+                    force_apt_get: true
+                    update_cache: true
+                    state: present
+  tasks:
+          - name: Install dependency packages
+            apt:
+                name: ["ninja-build", "gettext", "libtool", "libtool-bin", "autoconf", "automake", "cmake", "g++", "pkg-config", "unzip", "curl", "doxygen", "stow", "git"]
+            tags:
+                    - neovim
+                    - dotfiles
+
+          - name: Prepare directories
+            shell: mkdir -p -- ~/Code/OSS && mkdir -p ~/Code/Work
+            tags:
+                    - neovim
+                    - dotfiles
+
+          - name: Clone Dotfiles
+            ansible.builtin.git: 
+                repo: 'https://github.com/primalivet/dotfiles.git'
+                dest: ~/Code/OSS/dotfiles
+          - name: Set Tmux config
+            shell: cd ~/Code/OSS/dotfiles && stow tmux --no-folding -t ~
+            tags: 
+                - dotfiles
+                - tmux
+          - name: Set Neovim config
+            shell: cd ~/Code/OSS/dotfiles && stow nvim --no-folding -t ~
+            tags: 
+                - dotfiles
+                - neovim
+
+          - name: Install Tmux
+            apt:
+                    name: tmux
+            tags: 
+                - tmux
+
+          - name: Remove Neovim
+            shell: rm -rf ~/neovim
+            tags:
+                    - neovim
+          - name: Clone Neovim
+            ansible.builtin.git:
+                repo: 'https://github.com/neovim/neovim.git'
+                dest: ~/neovim
+            tags:
+                - neovim
+          - name: Build Neovim
+            shell: cd ~/neovim && make -j 20
+            tags:
+                - neovim
+          - name: Install Neovim
+            shell: cd ~/neovim && make install
+            tags:
+                - neovim
+          - name: Install Neovim package manager, Packer
+            ansible.builtin.git:
+                repo: 'https://github.com/wbthomason/packer.nvim'
+                dest: ~/.local/share/nvim/site/pack/packer/start/packer.nvim
+            tags: 
+                - neovim
