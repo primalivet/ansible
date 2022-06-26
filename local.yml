@@ -39,16 +39,28 @@
                 repo: 'https://github.com/primalivet/dotfiles.git'
                 dest: ~/Code/OSS/dotfiles
                 force: true
-          - name: Set Tmux config
+          - name: Link Tmux config
             shell: cd ~/Code/OSS/dotfiles && stow tmux --no-folding -t ~
             tags: 
                 - dotfiles
                 - tmux
-          - name: Set Neovim config
+          - name: Link Neovim config
             shell: cd ~/Code/OSS/dotfiles && stow nvim --no-folding -t ~
             tags: 
                 - dotfiles
                 - neovim
+          - name: Link ZSH config
+            shell: cd ~/Code/OSS/dotfiles && stow zsh --no-folding -t ~
+            tags: 
+                - dotfiles
+                - zsh
+
+          - name: Install ZSH
+            become: true
+            apt:
+                    name: zsh
+            tags: 
+                - zsh
 
           - name: Install Tmux
             become: true
