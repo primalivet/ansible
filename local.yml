@@ -10,12 +10,26 @@
           - name: Install dependency packages
             apt:
                 name: ["ninja-build", "gettext", "libtool", "libtool-bin", "autoconf", "automake", "cmake", "g++", "pkg-config", "unzip", "curl", "doxygen", "stow", "git"]
+            become: true
             tags:
                     - neovim
                     - dotfiles
 
-          - name: Prepare directories
-            shell: mkdir -p -- ~/Code/OSS && mkdir -p ~/Code/Work
+          - name: Prepare directory ~/Code/OSS
+            ansible.builtin.file:
+                    path: ~/Code/OSS
+                    recurse: true
+                    state: directory
+                    mode: '0755'
+            tags:
+                    - neovim
+                    - dotfiles
+          - name: Prepare directory ~/Code/Work
+            ansible.builtin.file:
+                    path: ~/Code/Work
+                    recurse: true
+                    state: directory
+                    mode: '0755'
             tags:
                     - neovim
                     - dotfiles
@@ -24,6 +38,7 @@
             ansible.builtin.git: 
                 repo: 'https://github.com/primalivet/dotfiles.git'
                 dest: ~/Code/OSS/dotfiles
+                force: true
           - name: Set Tmux config
             shell: cd ~/Code/OSS/dotfiles && stow tmux --no-folding -t ~
             tags: 
@@ -36,13 +51,30 @@
                 - neovim
 
           - name: Install Tmux
+            become: true
             apt:
                     name: tmux
             tags: 
                 - tmux
 
+          - name: Clone FZF
+            ansible.builtin.git:
+                    repo: https://github.com/junegunn/fzf.git
+                    dest: ~/.fzf
+            tags: 
+                - fzf
+                - neovim
+          - name: Install FZF
+            become: true
+            shell: "{{ lookup('env', 'HOME') }}/.fzf/install --all"
+            tags: 
+                - fzf
+                - neovim
+
           - name: Remove Neovim
-            shell: rm -rf ~/neovim
+            ansible.builtin.file:
+                    path: ~/neovim
+                    state: absent
             tags:
                     - neovim
           - name: Clone Neovim
@@ -56,6 +88,7 @@
             tags:
                 - neovim
           - name: Install Neovim
+            become: true
             shell: cd ~/neovim && make install
             tags:
                 - neovim
