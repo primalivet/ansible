@@ -22,7 +22,6 @@
                     state: directory
                     mode: '0755'
             tags:
-                    - neovim
                     - dotfiles
           - name: Prepare directory ~/Code/Work
             ansible.builtin.file:
@@ -31,7 +30,6 @@
                     state: directory
                     mode: '0755'
             tags:
-                    - neovim
                     - dotfiles
 
           - name: Clone Dotfiles
@@ -43,17 +41,14 @@
             shell: cd ~/Code/OSS/dotfiles && stow tmux --no-folding -t ~
             tags: 
                 - dotfiles
-                - tmux
           - name: Link Neovim config
             shell: cd ~/Code/OSS/dotfiles && stow nvim --no-folding -t ~
             tags: 
                 - dotfiles
-                - neovim
           - name: Link ZSH config
             shell: cd ~/Code/OSS/dotfiles && stow zsh --no-folding -t ~
             tags: 
                 - dotfiles
-                - zsh
 
           - name: Install ZSH
             become: true
@@ -75,13 +70,11 @@
                     dest: ~/.fzf
             tags: 
                 - fzf
-                - neovim
           - name: Install FZF
             become: true
             shell: "{{ lookup('env', 'HOME') }}/.fzf/install --all"
             tags: 
                 - fzf
-                - neovim
 
           - name: Remove Neovim
             ansible.builtin.file:
