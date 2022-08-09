@@ -23,6 +23,7 @@
                     mode: '0755'
             tags:
                     - dotfiles
+
           - name: Prepare directory ~/Code/Work
             ansible.builtin.file:
                     path: ~/Code/Work
@@ -33,73 +34,181 @@
                     - dotfiles
 
           - name: Clone Dotfiles
-            ansible.builtin.git: 
+            ansible.builtin.git:
                 repo: 'https://github.com/primalivet/dotfiles.git'
                 dest: ~/Code/OSS/dotfiles
-                force: true
+            tags:
+              - dotfiles
+
           - name: Link Tmux config
             shell: cd ~/Code/OSS/dotfiles && stow tmux --no-folding -t ~
-            tags: 
+            tags:
                 - dotfiles
+
           - name: Link Neovim config
             shell: cd ~/Code/OSS/dotfiles && stow nvim --no-folding -t ~
-            tags: 
+            tags:
                 - dotfiles
+
           - name: Link ZSH config
             shell: cd ~/Code/OSS/dotfiles && stow zsh --no-folding -t ~
-            tags: 
+            tags:
                 - dotfiles
 
           - name: Install ZSH
             become: true
             apt:
                     name: zsh
-            tags: 
+            tags:
                 - zsh
+
+          - name: Clone ZSH autosuggestions
+            ansible.builtin.git:
+                    repo: "https://github.com/zsh-users/zsh-autosuggestions.git"
+                    dest: "{{ lookup('env', 'HOME') }}/.local/src/zsh-autosuggestions"
+            tags:
+                - zsh
+
+          - name: Clone ZSH completions
+            ansible.builtin.git:
+                    repo: "https://github.com/zsh-users/zsh-completions.git"
+                    dest: "{{ lookup('env', 'HOME') }}/.local/src/zsh-completions"
+            tags:
+                - zsh
+
+          - name: Clone ZSH syntax highlighting
+            ansible.builtin.git:
+                    repo: "https://github.com/zsh-users/zsh-syntax-highlighting.git"
+                    dest: "{{ lookup('env', 'HOME') }}/.local/src/zsh-syntax-highlighting"
+            tags:
+                - zsh
+
+          - name: Install Ripgrep
+            become: true
+            apt:
+                    name: ripgrep
+            tags:
+                - ripgrep
 
           - name: Install Tmux
             become: true
             apt:
                     name: tmux
-            tags: 
+            tags:
                 - tmux
+
+          - name: Clone N (Node version manager)
+            ansible.builtin.git:
+                    repo: https://github.com/tj/n.git
+                    dest: "{{ lookup('env', 'HOME') }}/.local/src/n"
+            tags:
+                - node
+          - name: Install N (Node version manager)
+            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/n && PREFIX={{ lookup('env', 'HOME') }}/.local/ make install"
+            tags:
+                - node
+
+          - name: Download Node LTS
+            shell: "n 16.16.0 --quiet"
+            tags:
+              - node
+
+          - name: Install Typescript and Typescript Language Server (Node package)
+            shell: 'npm install --global typescript typescript-language-server' # vscode-langservers-extracted is used for json, css and more
+            tags:
+              - node_packages
+              - lsp
+
+          - name: Install VSCode Extracted Language Servers
+            shell: 'npm install --global vscode-langservers-extracted' # vscode-langservers-extracted is used for json, css and more
+            tags:
+              - node_packages
+              - lsp
+
+          - name: Install Eslint Deamon (Node package)
+            shell: 'npm install --global eslint_d'
+            tags:
+              - node_packages
+              - linter
+
+          - name: Install Yarn (Node package)
+            shell: 'npm install --global yarn'
+            tags:
+              - node_packages
+
+          - name: Clone Sumneko Lua Language Server
+            ansible.builtin.git:
+              repo: 'https://github.com/sumneko/lua-language-server.git'
+              dest: "{{ lookup('env', 'HOME') }}/.local/src/lua-language-server"
+              depth: 1
+            tags:
+              - lsp
+
+          - name: Update Sumneko Lua Language Server Git submodules
+            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/lua-language-server && git submodule update --depth 1 --init --recursive"
+            tags:
+              - lsp
+
+          - name: Compile Sumneko Lua Language Server
+            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/lua-language-server/3rd/luamake && ./compile/install.sh"
+            tags:
+              - lsp
+
+          - name: Build Sumneko Lua Language Server
+            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/lua-language-server && ./3rd/luamake/luamake rebuild"
+            tags:
+              - lsp
 
           - name: Clone FZF
             ansible.builtin.git:
                     repo: https://github.com/junegunn/fzf.git
-                    dest: ~/.fzf
-            tags: 
-                - fzf
-          - name: Install FZF
-            become: true
-            shell: "{{ lookup('env', 'HOME') }}/.fzf/install --all"
-            tags: 
+                    dest: "{{ lookup('env', 'HOME') }}/.local/src/fzf"
+            tags:
                 - fzf
 
-          - name: Remove Neovim
-            ansible.builtin.file:
-                    path: ~/neovim
-                    state: absent
+          - name: Install FZF
+            become: true
+            shell: "{{ lookup('env', 'HOME') }}/.local/src/fzf/install --all"
             tags:
-                    - neovim
+                - fzf
+
+          - name: Link FZF binary
+            file:
+              src: "{{ lookup('env', 'HOME') }}/.local/src/fzf/bin/fzf"
+              dest: "{{ lookup('env', 'HOME') }}/.local/bin/fzf"
+              state: link
+            tags:
+              - fzf
+
+          - name: Clone Z
+            ansible.builtin.git:
+                    repo: https://github.com/rupa/z.git
+                    dest: "{{ lookup('env', 'HOME') }}/.local/src/z"
+            tags:
+                - z
+
           - name: Clone Neovim
             ansible.builtin.git:
                 repo: 'https://github.com/neovim/neovim.git'
-                dest: ~/neovim
+                dest: "{{ lookup('env', 'HOME') }}/.local/src/neovim"
+                version: stable
             tags:
                 - neovim
+
           - name: Build Neovim
-            shell: cd ~/neovim && make -j 20
+            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/neovim && make clean && make distclean && make CMAKE_BUILD_TYPE=RelWithDebInfo"
             tags:
                 - neovim
+
           - name: Install Neovim
             become: true
-            shell: cd ~/neovim && make install
+            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/neovim && make install"
             tags:
                 - neovim
+
           - name: Install Neovim package manager, Packer
             ansible.builtin.git:
                 repo: 'https://github.com/wbthomason/packer.nvim'
-                dest: ~/.local/share/nvim/site/pack/packer/start/packer.nvim
-            tags: 
+                dest: "{{ lookup('env', 'HOME') }}/.local/share/nvim/site/pack/packer/start/packer.nvim"
+            tags:
                 - neovim
