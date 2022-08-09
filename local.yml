@@ -168,7 +168,7 @@
 
           - name: Install FZF
             become: true
-            shell: "{{ lookup('env', 'HOME') }}/.local/src/fzf/install --all"
+            shell: "{{ lookup('env', 'HOME') }}/.local/src/fzf/install --bin"
             tags:
                 - fzf
 
