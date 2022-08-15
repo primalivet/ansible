@@ -1,214 +1,312 @@
 - hosts: localhost
+  vars:
+    should_be_root: "{{ true if ansible_pkg_mgr != 'homebrew' else false }}"
   pre_tasks:
-          - name: Update APT
-            become: true
-            apt:
-                    force_apt_get: true
-                    update_cache: true
-                    state: present
+  - name: Update APT
+    when: ansible_pkg_mgr != 'homebrew'
+    become: true
+    apt:
+      force_apt_get: true
+      update_cache: true
+      state: present
   tasks:
-          - name: Install dependency packages
-            apt:
-                name: ["ninja-build", "gettext", "libtool", "libtool-bin", "autoconf", "automake", "cmake", "g++", "pkg-config", "unzip", "curl", "doxygen", "stow", "git"]
-            become: true
-            tags:
-                    - neovim
-                    - dotfiles
+  - name: Essential build tools (APT)
+    become: true
+    when: ansible_pkg_mgr != 'homebrew'
+    ansible.builtin.package:
+      name: ["ninja-build", "gettext", "libtool", "libtool-bin", "autoconf", "automake", "cmake", "g++", "pkg-config", "unzip", "doxygen"]
+    tags:
+    - base
+    - neovim
 
-          - name: Prepare directory ~/Code/OSS
-            ansible.builtin.file:
-                    path: ~/Code/OSS
-                    recurse: true
-                    state: directory
-                    mode: '0755'
-            tags:
-                    - dotfiles
+  - name: Essential build tools (Mac)
+    when: ansible_pkg_mgr == 'homebrew'
+    ansible.builtin.package:
+      name: ["ninja"]
+      state: present
+    tags:
+    - base
+      
+  - name: Install ZSH
+    become: "{{ should_be_root }}"
+    ansible.builtin.package:
+      name: zsh
+      state: present
+    tags:
+    - base
+    - zsh
 
-          - name: Prepare directory ~/Code/Work
-            ansible.builtin.file:
-                    path: ~/Code/Work
-                    recurse: true
-                    state: directory
-                    mode: '0755'
-            tags:
-                    - dotfiles
+  - name: Install Curl
+    become: "{{ should_be_root }}"
+    ansible.builtin.package:
+      name: curl
+      state: present
+    tags:
+    - base
 
-          - name: Clone Dotfiles
-            ansible.builtin.git:
-                repo: 'https://github.com/primalivet/dotfiles.git'
-                dest: ~/Code/OSS/dotfiles
-            tags:
-              - dotfiles
+  - name: Install Git
+    become: "{{ should_be_root }}"
+    ansible.builtin.package:
+      name: git
+      state: present
+    tags:
+    - base
 
-          - name: Link Tmux config
-            shell: cd ~/Code/OSS/dotfiles && stow tmux --no-folding -t ~
-            tags:
-                - dotfiles
+  - name: Install Stow
+    become: "{{ should_be_root }}"
+    ansible.builtin.package:
+      name: stow
+      state: present
+    tags:
+    - base
+    - dotfiles
 
-          - name: Link Neovim config
-            shell: cd ~/Code/OSS/dotfiles && stow nvim --no-folding -t ~
-            tags:
-                - dotfiles
+  - name: Install Tmux
+    become: "{{ should_be_root }}"
+    ansible.builtin.package:
+      name: tmux
+      state: present
+    tags:
+    - base
 
-          - name: Link ZSH config
-            shell: cd ~/Code/OSS/dotfiles && stow zsh --no-folding -t ~
-            tags:
-                - dotfiles
+  - name: Install Ripgrep
+    become: "{{ should_be_root }}"
+    ansible.builtin.package:
+      name: ripgrep
+      state: present
+    tags:
+    - base
 
-          - name: Install ZSH
-            become: true
-            apt:
-                    name: zsh
-            tags:
-                - zsh
+  - name: Prepare directory ~/.local/bin
+    ansible.builtin.file:
+      path: ~/.local/bin
+      recurse: true
+      state: directory
+    tags:
+    - base
 
-          - name: Clone ZSH autosuggestions
-            ansible.builtin.git:
-                    repo: "https://github.com/zsh-users/zsh-autosuggestions.git"
-                    dest: "{{ lookup('env', 'HOME') }}/.local/src/zsh-autosuggestions"
-            tags:
-                - zsh
+  - name: Prepare directory ~/.local/src
+    ansible.builtin.file:
+      path: ~/.local/src
+      recurse: true
+      state: directory
+    tags:
+    - base
+  - name: Prepare directory ~/Code/OSS
+    ansible.builtin.file:
+      path: ~/Code/OSS
+      recurse: true
+      state: directory
+    tags:
+    - dotfiles
 
-          - name: Clone ZSH completions
-            ansible.builtin.git:
-                    repo: "https://github.com/zsh-users/zsh-completions.git"
-                    dest: "{{ lookup('env', 'HOME') }}/.local/src/zsh-completions"
-            tags:
-                - zsh
+  - name: Prepare directory ~/Code/Work
+    ansible.builtin.file:
+      path: ~/Code/Work
+      recurse: true
+      state: directory
+    tags:
+    - dotfiles
 
-          - name: Clone ZSH syntax highlighting
-            ansible.builtin.git:
-                    repo: "https://github.com/zsh-users/zsh-syntax-highlighting.git"
-                    dest: "{{ lookup('env', 'HOME') }}/.local/src/zsh-syntax-highlighting"
-            tags:
-                - zsh
+  - name: Clone Dotfiles
+    shell: 'git clone git@github.com:primalivet/dotfiles ~/Code/OSS/dotfiles'
+    tags:
+    - test
+    - dotfiles
 
-          - name: Install Ripgrep
-            become: true
-            apt:
-                    name: ripgrep
-            tags:
-                - ripgrep
+  - name: Link Tmux config
+    shell: cd ~/Code/OSS/dotfiles && stow tmux --no-folding -t ~
+    tags:
+    - dotfiles
 
-          - name: Install Tmux
-            become: true
-            apt:
-                    name: tmux
-            tags:
-                - tmux
+  - name: Link Neovim config
+    shell: cd ~/Code/OSS/dotfiles && stow nvim --no-folding -t ~
+    tags:
+     - dotfiles
 
-          - name: Clone N (Node version manager)
-            ansible.builtin.git:
-                    repo: https://github.com/tj/n.git
-                    dest: "{{ lookup('env', 'HOME') }}/.local/src/n"
-            tags:
-                - node
-          - name: Install N (Node version manager)
-            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/n && PREFIX={{ lookup('env', 'HOME') }}/.local/ make install"
-            tags:
-                - node
+  - name: Link ZSH config
+    shell: cd ~/Code/OSS/dotfiles && stow zsh --no-folding -t ~
+    tags:
+    - dotfiles
 
-          - name: Download Node LTS
-            shell: "n 16.16.0 --quiet"
-            tags:
-              - node
+  - name: Clone ZSH autosuggestions
+    ansible.builtin.git:
+      repo: "https://github.com/zsh-users/zsh-autosuggestions.git"
+      dest: "{{ lookup('env', 'HOME') }}/.local/src/zsh-autosuggestions"
+    tags:
+    - zsh
 
-          - name: Install Typescript and Typescript Language Server (Node package)
-            shell: 'npm install --global typescript typescript-language-server' # vscode-langservers-extracted is used for json, css and more
-            tags:
-              - node_packages
-              - lsp
+  - name: Clone ZSH completions
+    ansible.builtin.git:
+      repo: "https://github.com/zsh-users/zsh-completions.git"
+      dest: "{{ lookup('env', 'HOME') }}/.local/src/zsh-completions"
+    tags:
+    - zsh
 
-          - name: Install VSCode Extracted Language Servers
-            shell: 'npm install --global vscode-langservers-extracted' # vscode-langservers-extracted is used for json, css and more
-            tags:
-              - node_packages
-              - lsp
+  - name: Clone ZSH syntax highlighting
+    ansible.builtin.git:
+      repo: "https://github.com/zsh-users/zsh-syntax-highlighting.git"
+      dest: "{{ lookup('env', 'HOME') }}/.local/src/zsh-syntax-highlighting"
+    tags:
+    - zsh
 
-          - name: Install Eslint Deamon (Node package)
-            shell: 'npm install --global eslint_d'
-            tags:
-              - node_packages
-              - linter
+  - name: Clone N (Node version manager)
+    ansible.builtin.git:
+      repo: https://github.com/tj/n.git
+      dest: "{{ lookup('env', 'HOME') }}/.local/src/n"
+    tags:
+    - node
 
-          - name: Install Yarn (Node package)
-            shell: 'npm install --global yarn'
-            tags:
-              - node_packages
+  - name: Install N (Node version manager)
+    shell: "cd {{ lookup('env', 'HOME') }}/.local/src/n && PREFIX={{ lookup('env', 'HOME') }}/.local/ make install"
+    tags:
+    - node
 
-          - name: Clone Sumneko Lua Language Server
-            ansible.builtin.git:
-              repo: 'https://github.com/sumneko/lua-language-server.git'
-              dest: "{{ lookup('env', 'HOME') }}/.local/src/lua-language-server"
-              depth: 1
-            tags:
-              - lsp
+  - name: Download Node LTS
+    shell: "n 16.16.0 --quiet"
+    tags:
+    - node
 
-          - name: Update Sumneko Lua Language Server Git submodules
-            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/lua-language-server && git submodule update --depth 1 --init --recursive"
-            tags:
-              - lsp
+  - name: Install Rustup
+    shell: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+    tags:
+    - rust
 
-          - name: Compile Sumneko Lua Language Server
-            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/lua-language-server/3rd/luamake && ./compile/install.sh"
-            tags:
-              - lsp
+  - name: Install Rust Analyzer
+    block:
+    - name: Fetch Rust Analyzer (APT)
+      when: ansible_pkg_mgr != 'homebrew'
+      shell: "curl -L https://github.com/rust-lang/rust-analyzer/releases/latest/download/rust-analyzer-x86_64-unknown-linux-gnu.gz | gunzip -c - > {{ lookup('env', 'HOME') }}/.local/bin/rust-analyzer"
+      tags:
+      - rust
+      - lsp
 
-          - name: Build Sumneko Lua Language Server
-            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/lua-language-server && ./3rd/luamake/luamake rebuild"
-            tags:
-              - lsp
+    - name: Fetch Rust Analyzer (Mac)
+      when: ansible_pkg_mgr == 'homebrew'
+      shell: "curl -L https://github.com/rust-lang/rust-analyzer/releases/latest/download/rust-analyzer-aarch64-apple-darwin.gz | gunzip -c - > {{ lookup('env', 'HOME') }}/.local/bin/rust-analyzer"
+      tags:
+      - rust
+      - lsp
 
-          - name: Clone FZF
-            ansible.builtin.git:
-                    repo: https://github.com/junegunn/fzf.git
-                    dest: "{{ lookup('env', 'HOME') }}/.local/src/fzf"
-            tags:
-                - fzf
+    - name: Make Rust Analyzer executable
+      shell: "chmod +x {{ lookup('env', 'HOME') }}/.local/bin/rust-analyzer"
+      tags:
+      - rust
+      - lsp
 
-          - name: Install FZF
-            become: true
-            shell: "{{ lookup('env', 'HOME') }}/.local/src/fzf/install --bin"
-            tags:
-                - fzf
+  - name: Install Typescript and Typescript Language Server (Node package)
+    shell: 'npm install --global typescript typescript-language-server' # vscode-langservers-extracted is used for json, css and more
+    tags:
+    - node_packages
+    - lsp
 
-          - name: Link FZF binary
-            file:
-              src: "{{ lookup('env', 'HOME') }}/.local/src/fzf/bin/fzf"
-              dest: "{{ lookup('env', 'HOME') }}/.local/bin/fzf"
-              state: link
-            tags:
-              - fzf
+  - name: Install VSCode Extracted Language Servers
+    shell: 'npm install --global vscode-langservers-extracted' # vscode-langservers-extracted is used for json, css and more
+    tags:
+    - node_packages
+    - lsp
 
-          - name: Clone Z
-            ansible.builtin.git:
-                    repo: https://github.com/rupa/z.git
-                    dest: "{{ lookup('env', 'HOME') }}/.local/src/z"
-            tags:
-                - z
+  - name: Install Eslint Deamon (Node package)
+    shell: 'npm install --global eslint_d'
+    tags:
+    - node_packages
+    - linter
 
-          - name: Clone Neovim
-            ansible.builtin.git:
-                repo: 'https://github.com/neovim/neovim.git'
-                dest: "{{ lookup('env', 'HOME') }}/.local/src/neovim"
-                version: stable
-            tags:
-                - neovim
+  - name: Install Yarn (Node package)
+    shell: 'npm install --global yarn'
+    tags:
+    - node_packages
 
-          - name: Build Neovim
-            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/neovim && make clean && make distclean && make CMAKE_BUILD_TYPE=RelWithDebInfo"
-            tags:
-                - neovim
+  - name: Sumneko Lua Language Server
+    block:
+    - name: Clone Sumneko Lua Language Server
+      ansible.builtin.git:
+        repo: 'https://github.com/sumneko/lua-language-server.git'
+        dest: "{{ lookup('env', 'HOME') }}/.local/src/lua-language-server"
+        depth: 1
+      tags:
+      - lsp
 
-          - name: Install Neovim
-            become: true
-            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/neovim && make install"
-            tags:
-                - neovim
+    - name: Update Sumneko Lua Language Server Git submodules
+      shell: "cd {{ lookup('env', 'HOME') }}/.local/src/lua-language-server && git submodule update --depth 1 --init --recursive"
+      tags:
+      - lsp
 
-          - name: Install Neovim package manager, Packer
-            ansible.builtin.git:
-                repo: 'https://github.com/wbthomason/packer.nvim'
-                dest: "{{ lookup('env', 'HOME') }}/.local/share/nvim/site/pack/packer/start/packer.nvim"
-            tags:
-                - neovim
+    - name: Compile Sumneko Lua Language Server
+      shell: "cd {{ lookup('env', 'HOME') }}/.local/src/lua-language-server/3rd/luamake && ./compile/install.sh"
+      tags:
+      - lsp
+
+    - name: Build Sumneko Lua Language Server
+      shell: "cd {{ lookup('env', 'HOME') }}/.local/src/lua-language-server && ./3rd/luamake/luamake rebuild"
+      tags:
+      - lsp
+
+  - name: Clone FZF
+    ansible.builtin.git:
+      repo: https://github.com/junegunn/fzf.git
+      dest: "{{ lookup('env', 'HOME') }}/.local/src/fzf"
+    tags:
+    - fzf
+    - base
+
+  - name: Install FZF
+    become: true
+    shell: "{{ lookup('env', 'HOME') }}/.local/src/fzf/install --bin"
+    tags:
+    - fzf
+    - base
+
+  - name: Link FZF binary
+    file:
+      src: "{{ lookup('env', 'HOME') }}/.local/src/fzf/bin/fzf"
+      dest: "{{ lookup('env', 'HOME') }}/.local/bin/fzf"
+      state: link
+    tags:
+    - fzf
+    - base
+
+  - name: Clone Z
+    ansible.builtin.git:
+      repo: https://github.com/rupa/z.git
+      dest: "{{ lookup('env', 'HOME') }}/.local/src/z"
+    tags:
+    - z
+    - base
+
+  - name: Install Neovim
+    when: ansible_pkg_mgr == 'homebrew'
+    ansible.builtin.package:
+      name: neovim
+      state: present
+    tags:
+    - neovim
+
+  - name: Neovim (build from source)
+    when: ansible_pkg_mgr != 'homebrew'
+    block:
+    - name: Clone Neovim
+      ansible.builtin.git:
+        repo: 'https://github.com/neovim/neovim.git'
+        dest: "{{ lookup('env', 'HOME') }}/.local/src/neovim"
+        version: stable
+      tags:
+      - neovim
+
+    - name: Build Neovim
+      shell: "cd {{ lookup('env', 'HOME') }}/.local/src/neovim && make clean && make distclean && make CMAKE_BUILD_TYPE=RelWithDebInfo"
+      tags:
+          - neovim
+
+    - name: Install Neovim
+      become: true
+      shell: "cd {{ lookup('env', 'HOME') }}/.local/src/neovim && make install"
+      tags:
+          - neovim
+
+  - name: Install Neovim package manager, Packer
+    ansible.builtin.git:
+        repo: 'https://github.com/wbthomason/packer.nvim'
+        dest: "{{ lookup('env', 'HOME') }}/.local/share/nvim/site/pack/packer/start/packer.nvim"
+    tags:
+        - neovim
