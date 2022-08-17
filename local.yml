@@ -22,7 +22,7 @@
   - name: Essential build tools (Mac)
     when: ansible_pkg_mgr == 'homebrew'
     ansible.builtin.package:
-      name: ["ninja"]
+      name: ["ninja", "llvm"]
       state: present
     tags:
     - base
@@ -166,6 +166,16 @@
     shell: "n 16.16.0 --quiet"
     tags:
     - node
+
+  - name: Install Haskell (GHCup)
+    become: true
+    shell: "curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh"
+    environment:
+      BOOTSTRAP_HASKELL_NONINTERACTIVE: 1
+      BOOTSTRAP_HASKELL_INSTALL_STACK: 1
+      BOOTSTRAP_HASKELL_INSTALL_HLS: 1
+    tags:
+    - haskell
 
   - name: Install Rustup
     shell: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
