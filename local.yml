@@ -227,6 +227,11 @@
     tags:
     - node_packages
 
+  - name: Install StyLua (Node package)
+    shell: 'npm install --global @johnnymorganz/stylua-bin'
+    tags:
+    - node_packages
+
   - name: Sumneko Lua Language Server
     block:
     - name: Clone Sumneko Lua Language Server
