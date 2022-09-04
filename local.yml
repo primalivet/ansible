@@ -109,9 +109,12 @@
     - dotfiles
 
   - name: Clone Dotfiles
-    shell: 'git clone git@github.com:primalivet/dotfiles ~/Code/OSS/dotfiles'
+    ansible.builtin.git:
+      repo: "git@github.com:primalivet/dotfiles"
+      dest: "{{ lookup('env', 'HOME') }}/Code/OSS/dotfiles"
+      clone: yes
+      update: no
     tags:
-    - test
     - dotfiles
 
   - name: Link Tmux config
