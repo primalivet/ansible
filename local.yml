@@ -196,7 +196,7 @@
                 - neovim
 
           - name: Build Neovim
-            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/neovim && make clean && make distclean && make CMAKE_BUILD_TYPE=RelWithDebInfo"
+            shell: "cd {{ lookup('env', 'HOME') }}/.local/src/neovim && make CMAKE_BUILD_TYPE=RelWithDebInfo"
             tags:
                 - neovim
 
